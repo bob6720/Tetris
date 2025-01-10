@@ -18,6 +18,8 @@ enum TickSpeed {
 export function useTetris() {
   const [score, setScore] = useState(0);
   const [upcomingBlocks, setUpcomingBlocks] = useState<Block[]>([]);
+  const [heldBlock, setHeldBlock] = useState<Block | null>(null);
+  const [canHold, setCanHold] = useState(true); // Ensure hold can only happen once
   const [isCommitting, setIsCommitting] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [tickSpeed, setTickSpeed] = useState<TickSpeed | null>(null);
@@ -82,6 +84,7 @@ export function useTetris() {
       newBoard: [...getEmptyBoard(BOARD_HEIGHT - newBoard.length), ...newBoard],
       newBlock,
     });
+    setCanHold(true); // Re-enable holding after the block has been placed
     setIsCommitting(false);
   }, [
     board,
@@ -171,6 +174,22 @@ export function useTetris() {
         isPressingRight = true;
         updateMovementInterval();
       }
+
+      // Handle Shift key for holding a block
+      if (event.key === 'Shift' && canHold) {
+        if (heldBlock) {
+          // Swap the held block with the current dropping block
+          const newUpcomingBlocks = structuredClone(upcomingBlocks);
+          const temp = heldBlock;
+          setHeldBlock(droppingBlock); // Save current block to hold
+          setUpcomingBlocks([temp, ...newUpcomingBlocks.slice(1)]); // Place held block into the upcoming blocks
+        } else {
+          // No block is held, so just put the current block in hold
+          setHeldBlock(droppingBlock); // Hold current block
+          setUpcomingBlocks([getRandomBlock(), ...upcomingBlocks.slice(1)]); // Pull the next block up
+        }
+        setCanHold(false); // Disable holding until block placement
+      }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -188,7 +207,6 @@ export function useTetris() {
         updateMovementInterval();
       }
       if (event.key === ' ') {
-        
         commitPosition();
       }
     };
@@ -220,6 +238,7 @@ export function useTetris() {
     isPlaying,
     score,
     upcomingBlocks,
+    heldBlock, // Expose held block to the component
   };
 }
 
