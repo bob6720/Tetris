@@ -1,3 +1,23 @@
+/* Glowing effect for the landing cells */
+.cell.highlight {
+    animation: glowing 1.5s infinite alternate;
+    border: 2px solid gold;  /* Add gold border for more visibility */
+  }
+  
+  /* Animation for the glowing effect */
+  @keyframes glowing {
+    0% {
+      box-shadow: 0 0 5px gold, 0 0 10px gold, 0 0 15px gold, 0 0 20px gold;
+    }
+    50% {
+      box-shadow: 0 0 10px gold, 0 0 20px gold, 0 0 30px gold, 0 0 40px gold;
+    }
+    100% {
+      box-shadow: 0 0 15px gold, 0 0 25px gold, 0 0 35px gold, 0 0 50px gold;
+    }
+  }
+  
+
 .app {
     display: grid;
     grid-template-areas:
@@ -7,8 +27,9 @@
   }
 
   body {
-    background-color: red;
-    color: white;
+    background-color: #edfbba;
+    color: black;
+    font-family: 'Roboto', sans-serif;
   }
   
   h1 {
@@ -18,7 +39,7 @@
   
   button {
     padding: 4px;
-    font-size: 1.5em;
+    font-size: 1.4rem;
   }
   
   .board {
@@ -29,7 +50,29 @@
   }
   
   .controls {
+    display: grid;
+    grid-template-rows: auto auto auto; /* Auto size rows based on content */
     grid-area: controls;
+    margin-left: 30px;
+  }
+  
+  .controls-container {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    border-radius: 8px;
+    width: fit-content;
+    margin-left: 20px;
+    grid-row: 1;
+  }
+  
+  .controls-container2 {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    border-radius: 8px;
+    width: fit-content;
+    margin-left: 20px;
+    margin-top: 30px;
+    grid-row: 2;
   }
   
   .row {
@@ -38,7 +81,7 @@
   
   .upcoming {
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     justify-content: space-between;
     gap: 10px;
     padding: 10px;
@@ -59,29 +102,29 @@
   }
   
   .cell.I {
-    background-color: rgb(80, 227, 230);
+    background-color: #f0c808;
   }
   
   .cell.J {
-    background-color: rgb(36, 95, 223);
+    background-color: #5d4b20;
   }
   
   .cell.L {
-    background-color: rgb(223, 173, 36);
+    background-color: #469374;
   }
   
   .cell.O {
-    background-color: rgb(223, 217, 36);
+    background-color: #9341b3;
   }
   
   .cell.S {
-    background-color: rgb(48, 211, 56);
+    background-color: #e3427d;
   }
   
   .cell.T {
-    background-color: rgb(132, 61, 198);
+    background-color: #e68653;
   }
   
   .cell.Z {
-    background-color: rgb(227, 78, 78);
+    background-color: #fbbcee;
   }

@@ -21,6 +21,7 @@ export function useTetris() {
   const [isCommitting, setIsCommitting] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [tickSpeed, setTickSpeed] = useState<TickSpeed | null>(null);
+  const [isShiftPressed, setIsShiftPressed] = useState(false); // Track Shift key press
 
   const [
     { board, droppingRow, droppingColumn, droppingBlock, droppingShape },
@@ -77,11 +78,21 @@ export function useTetris() {
     }
     setUpcomingBlocks(newUpcomingBlocks);
     setScore((prevScore) => prevScore + getPoints(numCleared));
+
+    // Fixing the spread issue: Ensure both newBoard and emptyBoard are arrays
+const emptyBoard = getEmptyBoard(BOARD_HEIGHT - newBoard.length);
+
+// Ensure emptyBoard and newBoard are arrays of BoardShape
+    if (Array.isArray(emptyBoard) && Array.isArray(newBoard)) {
     dispatchBoardState({
-      type: 'commit',
-      newBoard: [...getEmptyBoard(BOARD_HEIGHT - newBoard.length), ...newBoard],
-      newBlock,
+        type: 'commit',
+        newBoard: [...emptyBoard, ...newBoard],  // Spread arrays correctly
+        newBlock,
     });
+    } else {
+    console.error("Both emptyBoard and newBoard should be arrays!");
+    }
+
     setIsCommitting(false);
   }, [
     board,
@@ -93,12 +104,53 @@ export function useTetris() {
     upcomingBlocks,
   ]);
 
+  const getLandingPosition = useCallback(() => {
+    let dropRow = droppingRow;
+    while (!hasCollisions(board, droppingShape, dropRow + 1, droppingColumn)) {
+      dropRow++;
+    }
+    return dropRow;
+  }, [board, droppingColumn, droppingRow, droppingShape]);
+
   const gameTick = useCallback(() => {
     if (isCommitting) {
       commitPosition();
-    } else if (
-      hasCollisions(board, droppingShape, droppingRow + 1, droppingColumn)
-    ) {
+    } else if (isShiftPressed) {
+      // Handle Shift (Instant Drop)
+      let dropRow = getLandingPosition();
+      const newBoard = structuredClone(board);
+      addShapeToBoard(newBoard, droppingBlock, droppingShape, dropRow, droppingColumn);
+
+      let numCleared = 0;
+      for (let row = BOARD_HEIGHT - 1; row >= 0; row--) {
+        if (newBoard[row].every((entry) => entry !== EmptyCell.Empty)) {
+          numCleared++;
+          newBoard.splice(row, 1);
+        }
+      }
+
+      const newUpcomingBlocks = [...upcomingBlocks];
+      const newBlock = newUpcomingBlocks.pop()!;
+      newUpcomingBlocks.unshift(getRandomBlock());
+
+      if (hasCollisions(board, SHAPES[newBlock].shape, 0, 3)) {
+        setIsPlaying(false);
+        setTickSpeed(null);
+      } else {
+        setTickSpeed(TickSpeed.Normal);
+      }
+
+      setUpcomingBlocks(newUpcomingBlocks);
+      setScore((prevScore) => prevScore + getPoints(numCleared));
+
+      dispatchBoardState({
+        type: 'commit',
+        newBoard: [...getEmptyBoard(BOARD_HEIGHT - newBoard.length), ...newBoard],
+        newBlock,
+      });
+
+      setIsCommitting(false);
+    } else if (hasCollisions(board, droppingShape, droppingRow + 1, droppingColumn)) {
       setTickSpeed(TickSpeed.Sliding);
       setIsCommitting(true);
     } else {
@@ -112,6 +164,9 @@ export function useTetris() {
     droppingRow,
     droppingShape,
     isCommitting,
+    isShiftPressed,
+    upcomingBlocks,
+    getLandingPosition,
   ]);
 
   useInterval(() => {
@@ -171,6 +226,10 @@ export function useTetris() {
         isPressingRight = true;
         updateMovementInterval();
       }
+
+      if (event.key === 'Shift') {
+        setIsShiftPressed(true); // Track Shift key press
+      }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -187,9 +246,13 @@ export function useTetris() {
         isPressingRight = false;
         updateMovementInterval();
       }
+
       if (event.key === ' ') {
-        
         commitPosition();
+      }
+
+      if (event.key === 'Shift') {
+        setIsShiftPressed(false); // Reset Shift key state
       }
     };
 
@@ -203,16 +266,42 @@ export function useTetris() {
     };
   }, [dispatchBoardState, isPlaying]);
 
-  const renderedBoard = structuredClone(board) as BoardShape;
-  if (isPlaying) {
-    addShapeToBoard(
-      renderedBoard,
-      droppingBlock,
-      droppingShape,
-      droppingRow,
-      droppingColumn
-    );
+// Get the landing position of the falling block for guide rendering
+const landingRow = getLandingPosition();
+
+// Render the board with the guide (highlighting cells where the block will land)
+const renderedBoard = structuredClone(board) as BoardShape;
+if (isPlaying) {
+  addShapeToBoard(
+    renderedBoard,
+    droppingBlock,
+    droppingShape,
+    droppingRow,
+    droppingColumn
+  );
+}
+
+// Highlight the cells where the block will land
+for (let rowIndex = 0; rowIndex < droppingShape.length; rowIndex++) {
+  for (let colIndex = 0; colIndex < droppingShape[rowIndex].length; colIndex++) {
+    if (droppingShape[rowIndex][colIndex]) {
+      const row = landingRow + rowIndex;
+      const col = droppingColumn + colIndex;
+      // Check if the cell is within the bounds of the board
+      if (row < BOARD_HEIGHT) {
+        // Ensure the cell is empty before highlighting (no overlap with placed blocks)
+        if (renderedBoard[row][col] === EmptyCell.Empty) {
+          renderedBoard[row][col] = {
+            ...renderedBoard[row][col],
+            highlight: true,  // Flag for highlighting
+          };
+        }
+      }
+    }
   }
+}
+
+
 
   return {
     board: renderedBoard,
@@ -220,6 +309,7 @@ export function useTetris() {
     isPlaying,
     score,
     upcomingBlocks,
+    landingRow,  // Pass the landing row to the rendering component
   };
 }
 
